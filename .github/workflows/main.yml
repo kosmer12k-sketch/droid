@@ -22,25 +22,25 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Patch missing ZRLEEncoding and import
+      - name: Apply all fixes for ZRLEEncoding
         run: |
           ENC_DIR="rfbcore/src/main/java/app/razar/rfbcore/encodings"
           mkdir -p "$ENC_DIR"
-          
-          # Проверяем, интерфейс ли Encoding или класс, чтобы правильно унаследоваться
-          if grep -rn "interface Encoding" "$ENC_DIR"; then
-            PARENT="Encoding"
-          else
-            PARENT="Encoding()"
-          fi
 
-          cat << EOF > "$ENC_DIR/ZRLEEncoding.kt"
+          # 1. Создаем класс ZRLEEncoding с наследованием от Encoding и реализацией encodingId
+          cat << 'EOF' > "$ENC_DIR/ZRLEEncoding.kt"
           package app.razar.rfbcore.encodings
 
-          open class ZRLEEncoding : $PARENT
+          open class ZRLEEncoding : Encoding() {
+              override val encodingId: Int = 16
+          }
           EOF
 
-          sed -i 's/package app.razar.rfbcore/package app.razar.rfbcore\nimport app.razar.rfbcore.encodings.ZRLEEncoding/' rfbcore/src/main/java/app/razar/rfbcore/VNCImpl.kt
+          # 2. Добавляем недостающий import в VNCImpl.kt (если его еще нет)
+          VNC_FILE="rfbcore/src/main/java/app/razar/rfbcore/VNCImpl.kt"
+          if ! grep -q "import app.razar.rfbcore.encodings.ZRLEEncoding" "$VNC_FILE"; then
+            sed -i 's/package app.razar.rfbcore/package app.razar.rfbcore\nimport app.razar.rfbcore.encodings.ZRLEEncoding/' "$VNC_FILE"
+          fi
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
