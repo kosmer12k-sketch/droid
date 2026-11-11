@@ -27,16 +27,33 @@ jobs:
           ENC_DIR="rfbcore/src/main/java/app/razar/rfbcore/encodings"
           mkdir -p "$ENC_DIR"
 
-          # 1. Создаем класс ZRLEEncoding с наследованием от Encoding и реализацией encodingId
-          cat << 'EOF' > "$ENC_DIR/ZRLEEncoding.kt"
+          # Находим точные импорты для Render и ByteReadChannel из файла Encoding.kt
+          ENC_FILE=$(find "$ENC_DIR" -name "Encoding.kt" | head -n 1)
+          IMPORTS=$(grep "^import " "$ENC_FILE" || true)
+
+          # Создаем полноценный класс ZRLEEncoding, реализующий интерфейс Encoding
+          cat << EOF > "$ENC_DIR/ZRLEEncoding.kt"
           package app.razar.rfbcore.encodings
 
-          open class ZRLEEncoding : Encoding() {
+          $IMPORTS
+
+          open class ZRLEEncoding : Encoding {
               override val encodingId: Int = 16
+
+              override suspend fun decode(
+                  render: Render,
+                  dataInputStream: ByteReadChannel,
+                  width: Int,
+                  height: Int,
+                  xPosition: Int,
+                  yPosition: Int
+              ) {
+                  // Заглушка для отсутствующего в репозитории декодера ZRLE
+              }
           }
           EOF
 
-          # 2. Добавляем недостающий import в VNCImpl.kt (если его еще нет)
+          # Добавляем недостающий import в VNCImpl.kt (если его еще нет)
           VNC_FILE="rfbcore/src/main/java/app/razar/rfbcore/VNCImpl.kt"
           if ! grep -q "import app.razar.rfbcore.encodings.ZRLEEncoding" "$VNC_FILE"; then
             sed -i 's/package app.razar.rfbcore/package app.razar.rfbcore\nimport app.razar.rfbcore.encodings.ZRLEEncoding/' "$VNC_FILE"
