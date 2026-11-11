@@ -27,18 +27,18 @@ jobs:
           ENC_DIR="rfbcore/src/main/java/app/razar/rfbcore/encodings"
           mkdir -p "$ENC_DIR"
           
-          # Копируем структуру из существующего класса кодировки (например, RawEncoding.kt), если он есть
-          SAMPLE=$(find "$ENC_DIR" -name "*Encoding.kt" ! -name "ZRLEEncoding.kt" | head -n 1)
-          if [ -n "$SAMPLE" ]; then
-            BASE_NAME=$(basename "$SAMPLE" .kt)
-            sed "s/$BASE_NAME/ZRLEEncoding/g" "$SAMPLE" > "$ENC_DIR/ZRLEEncoding.kt"
+          # Проверяем, интерфейс ли Encoding или класс, чтобы правильно унаследоваться
+          if grep -rn "interface Encoding" "$ENC_DIR"; then
+            PARENT="Encoding"
           else
-            cat << 'EOF' > "$ENC_DIR/ZRLEEncoding.kt"
+            PARENT="Encoding()"
+          fi
+
+          cat << EOF > "$ENC_DIR/ZRLEEncoding.kt"
           package app.razar.rfbcore.encodings
 
-          open class ZRLEEncoding : Encoding()
+          open class ZRLEEncoding : $PARENT
           EOF
-          fi
 
           sed -i 's/package app.razar.rfbcore/package app.razar.rfbcore\nimport app.razar.rfbcore.encodings.ZRLEEncoding/' rfbcore/src/main/java/app/razar/rfbcore/VNCImpl.kt
 
